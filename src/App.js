@@ -1,19 +1,20 @@
 import "bootstrap/dist/css/bootstrap.min.css";
 import "./App.css";
+import { Row } from "react-bootstrap";
+import { Col } from "react-bootstrap";
 import React, { useState, useEffect } from "react";
-import Row from "react-bootstrap/Row";
-import Col from "react-bootstrap/Col";
+import answers from './answers.json'
 import Container from "react-bootstrap/Container";
-import validWords from "./validWords.json";
-import answers from "./answers.json";
-import WordRow from "./components/WordRow";
+import WordRow from './WordRow'
+import Notification from "./Notification";
+import validWords from './validWords.json'
 
-//return random number
 const getRandomInt = (min, max) => {
   min = Math.ceil(min);
   max = Math.floor(max);
   return Math.floor(Math.random() * (max - min) + min); //The maximum is exclusive and the minimum is inclusive
 };
+
 
 //max count of word
 const maxWordLength = 5;
@@ -21,13 +22,17 @@ const maxWordLength = 5;
 //max count of rows
 const maxGuessCount = 6;
 
-//picked is array of individual letters of randamly selected word
+
 const picked = answers[getRandomInt(0, answers.length)].split("");
 
-
 const App = () => {
-  //final answer
+
   const [answer, setAnswer] = useState(picked);
+
+  // mid game notification
+  const [notificationVisible, setNotificationVisible] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState("");
+
 
   //count of guess word
   const [guessesUsedCount, setGuessesUsedCount] = useState(0);
@@ -35,17 +40,12 @@ const App = () => {
   const [victory, setVictory] = useState(false);
   const [failure, setFailure] = useState(false);
 
-  //mid game notification
-  const [notificationVisible, setNotificationVisible] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState("");
-
-  //final victory or failure
+   //final victory or failure
   const [resultMessage, setResultMessage] = useState(null);
 
-  //array of all letters typed till yet
+   //array of all letters typed till yet
   const [guessedLetterArray, setGuessedLetterArray] = useState([]);
 
-  //return true when we are on last block of every line
   const endOfLine =
     guessedLetterArray.length &&
     guessedLetterArray.length % maxWordLength === 0 &&
@@ -58,69 +58,59 @@ const App = () => {
       guessesUsedCount >=
         Math.floor(guessedLetterArray.length / maxWordLength));
 
-  //keyboard
+
+
   useEffect(() => {
     window.onkeydown = (e) => {
       handleKeyDown(e.key);
     };
   });
 
-  //notification
-  const Notification = (props) => {
-    const { timeOut } = props;
-    if (notificationVisible) {
-      setTimeout(() => {
-        if (notificationVisible) {
-          setNotificationVisible(false);
-        }
-      }, timeOut);
-    }
-    return (
-      <div
-        className={
-          "notification " + (notificationVisible ? "opacity-100" : "opacity-0")
-        }
-      >
-        {notificationMessage}
-      </div>
-    );
-  };
+  useEffect(()=>{
+    console.log(guessedLetterArray,answer)
+  },[guessedLetterArray,answer])
 
-  let letterRows = [];
-  let i = 0;
-  while (i < maxGuessCount) {
-    letterRows.push(
-      <WordRow
-        key={`guess-row-${i}`}
-        rowNum={i}
-        guessedLetterArray={guessedLetterArray}
-        answer={answer}
-        maxWordLength={maxWordLength}
-        active={guessedLetterArray.length - (endOfLine ? 1 : 0)}
-        sent={guessesUsedCount > i}
-        victory={victory}
-      />
-    );
-    i++;
-  }
-
-  //sent is bascically that we have pressed enter button and guessesUsedCount incremented
-
-  const handleLetter = (ltr) => {
-    if (notificationVisible) {
-      setNotificationVisible(false);
-    }
-    setGuessedLetterArray((guessedLetterArray) => [...guessedLetterArray, ltr]);
-  };
-
-  const handleBackSpace = () => {
-    if (startOfLine) {
+  const handleKeyDown = (key) => {
+    if (key === "Enter") {
+      if (victory || failure) {
+        newGame();
+        return;
+      }
+      handleEnter();
       return;
     }
-    let newInput = [...guessedLetterArray];
+    if (victory) {
+      return;
+    }
+    const isLetter =
+      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".indexOf(key) !==
+      -1;
+    if (isLetter && !endOfLine) {
+      setGuessedLetterArray((guessedLetterArray) => [...guessedLetterArray, key.toUpperCase()]);
+      return;
+    }
+    if (key === "Backspace") {
+      if (startOfLine) {
+        return;
+      }
+
+      let newInput = [...guessedLetterArray];
     newInput.pop();
     setGuessedLetterArray(newInput);
+      return;
+    }
   };
+
+
+  const handleEnter = () => {
+    if (!endOfLine) {
+      setNotificationMessage("Not enough letters.");
+      setNotificationVisible(true);
+      return;
+    }
+    checkVictory();
+  };
+
 
   const checkVictory = () => {
     let i = 0;
@@ -164,40 +154,6 @@ const App = () => {
       }
     }
   };
-  const handleEnter = () => {
-    if (!endOfLine) {
-      setNotificationMessage("Not enough letters.");
-      setNotificationVisible(true);
-      return;
-    }
-    checkVictory();
-  };
-
-  const handleKeyDown = (key) => {
-    if (key === "Enter") {
-      if (victory || failure) {
-        newGame();
-        return;
-      }
-      handleEnter();
-      return;
-    }
-    if (victory) {
-      return;
-    }
-
-    const isLetter =
-      "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".indexOf(key) !==
-      -1;
-    if (isLetter && !endOfLine) {
-      handleLetter(key.toUpperCase());
-      return;
-    }
-    if (key === "Backspace") {
-      handleBackSpace();
-      return;
-    }
-  };
 
   const newGame = () => {
     setVictory(false);
@@ -208,25 +164,49 @@ const App = () => {
     setResultMessage(null);
   };
 
-  return (
 
+  let letterRows = [];
+  let i = 0;
+
+  while (i < maxGuessCount) {
+    letterRows.push(
+      <WordRow
+        key={`guess-row-${i}`}
+        rowNum={i}
+        maxWordLength={maxWordLength}
+        active={guessedLetterArray.length - (endOfLine ? 1 : 0)}
+        guessedLetterArray={guessedLetterArray}
+        isWordGuessed={guessesUsedCount > i}
+        victory={victory}
+        answer={answer}
+
+      />
+    );
+    i++;
+  }
+
+  return (
     <Container
       fluid="sm"
       tabIndex={1}
-      className="h-100 text-center  md-3 pt-lg-4 px-0 px-sm-4"
+      className="h-100 text-center  md-3 pt-lg-4 px-0 px-sm-4 topDiv"
     >
       <header className="d-sm-none d-md-block">
         <h5 className="mt-md-4 mt-lg-5">CodeFoster Presents</h5>
-        <h1>Wordle Play</h1>
+        <h1>Wordle <span style={{color:'#ff7f50'}}>Play</span></h1>
       </header>
-      <Container
+      <div className="mainDiv">
+      <div
         className="App"
         style={{ maxWidth: "480px", }}
       >
         <Row>
           <Col xs={12}>{letterRows}</Col>
         </Row>
-        <Notification timeOut={2500} />
+        <Notification timeOut={2500}
+        notificationVisible={notificationVisible} setNotificationVisible= {setNotificationVisible} notificationMessage={notificationMessage}
+        
+        />
         {resultMessage && (
           <Row>
             <Col xs={12} className="p-0">
@@ -234,7 +214,24 @@ const App = () => {
             </Col>
           </Row>
         )}
+      </div>
+
+      <Container
+        className="App rules"
+        style={{ maxWidth: "480px", }}
+      >
+        <h2 className="heading">Rules</h2>
+     <ol>
+       <li>Once the game is loaded  you can begin typing your first guess.  When you are ready, press enter. </li>
+       <li>If the cell becomes <span style={{color:"green"}}>green</span> that means the corresponsing letter is correct</li>
+       <li>If the cell becomes <span style={{color:"#daa520"}}>orange</span>  that means the corresponsing letter is in wrong place</li>
+       <li>If the cell becomes <span style={{color:"grey"}}>grey</span>  that means the corresponsing letter is not present</li>
+       <li>You will get 6 trials to guess the correct word</li>
+
+     </ol>
+        
       </Container>
+      </div>
     </Container>
   );
 };
