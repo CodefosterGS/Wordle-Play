@@ -25,8 +25,6 @@ const maxGuessCount = 6;
 
 const picked = answers[getRandomInt(0, answers.length)].split("");
 
-
-
 const App = () => {
 
   const [answer, setAnswer] = useState(picked);
